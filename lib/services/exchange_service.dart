@@ -1,6 +1,5 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import '../models/currency_rate.dart';
 
 class ExchangeService {
   static Future<double> fetchExchangeRate(

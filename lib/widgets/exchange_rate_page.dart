@@ -7,25 +7,10 @@ class ExchangeRatePage extends StatefulWidget {
 }
 
 class _ExchangeRatePageState extends State<ExchangeRatePage> {
-  double exchangeRate = 0;
   String baseCurrency = 'EUR';
   String targetCurrency = 'USD';
   TextEditingController amountController = TextEditingController();
   String amountText = '';
-
-  Future<void> fetchExchangeRate() async {
-    final rate = await ExchangeService.fetchExchangeRate(
-        baseCurrency, targetCurrency);
-    setState(() {
-      exchangeRate = rate;
-    });
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    fetchExchangeRate();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +27,7 @@ class _ExchangeRatePageState extends State<ExchangeRatePage> {
         actions: [
           IconButton(
             icon: Icon(Icons.refresh),
-            onPressed: fetchExchangeRate,
+            onPressed: () => setState(() {}),
           ),
         ],
       ),
@@ -50,9 +35,29 @@ class _ExchangeRatePageState extends State<ExchangeRatePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              '1 $baseCurrency = ${exchangeRate.toStringAsFixed(2)} $targetCurrency',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            FutureBuilder<double>(
+              future: ExchangeService.fetchExchangeRate(baseCurrency, targetCurrency),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return CircularProgressIndicator();
+                } else if (snapshot.hasError) {
+                  return Text("Error: ${snapshot.error}");
+                } else {
+                  double rate = snapshot.data ?? 0;
+                  return Column(
+                    children: [
+                      Text(
+                        '1 $baseCurrency = ${rate.toStringAsFixed(2)} $targetCurrency',
+                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        '${amountText.isEmpty ? '' : amountText} $baseCurrency = ${(double.parse(amountText.isEmpty ? '0' : amountText) * rate).toStringAsFixed(2)} $targetCurrency',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  );
+                }
+              },
             ),
             SizedBox(height: 20),
             Row(
@@ -83,7 +88,6 @@ class _ExchangeRatePageState extends State<ExchangeRatePage> {
                       baseCurrency = targetCurrency;
                       targetCurrency = temp;
                     });
-                    fetchExchangeRate();
                   },
                   child: Text('Switch Direction'),
                   style: ElevatedButton.styleFrom(
@@ -103,7 +107,6 @@ class _ExchangeRatePageState extends State<ExchangeRatePage> {
                 setState(() {
                   targetCurrency = newValue!;
                 });
-                fetchExchangeRate();
               },
               items: <String>['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD']
                   .map<DropdownMenuItem<String>>((String value) {
@@ -129,11 +132,6 @@ class _ExchangeRatePageState extends State<ExchangeRatePage> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-            ),
-            SizedBox(height: 20),
-            Text(
-              '${amountText.isEmpty ? '' : amountText} $baseCurrency = ${(double.parse(amountText.isEmpty ? '0' : amountText) * exchangeRate).toStringAsFixed(2)} $targetCurrency',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
           ],
         ),
